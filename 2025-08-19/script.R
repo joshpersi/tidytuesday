@@ -4,46 +4,34 @@ df <- readr::read_csv(
 
 df <- dplyr::filter(df, !is.na(Name))
 
-df_sf <- sf::st_as_sf(df, coords = c("xcoord", "ycoord"), crs = "EPSG:27700")
-
-ben_nevis <- dplyr::filter(df_sf, Name == "Ben Nevis")
-
-df_sf <- sf::st_filter(
-  df_sf,
-  ben_nevis,
-  .predicate = sf::st_is_within_distance,
-  dist = units::set_units(5, "km")
-)
-
-
-points_vect <- terra::vect(df_sf, geom = c("x", "y"), crs = "EPSG:27700")
-
-# Create a raster template
-ext_buffer <- terra::ext(df_sf) + 0.01 # Add small buffer
-
-r <- terra::rast(ext_buffer, resolution = 0.001) # Adjust resolution as needed
-
-terra::crs(r) <- "EPSG:4326"
-
-# Interpolate elevation values (using thin plate spline)
-interpolated_raster <- terra::interpolate(
-  r,
-  points_vect,
-  field = "elevation",
-  method = "tps"
-)
-
-# Create contour lines
-contour_lines <- as.contour(interpolated_raster)
-
-# Convert to sf for ggplot
-contours_sf <- st_as_sf(contour_lines)
-
-
-ggplot2::ggplot() +
-  ggplot2::geom_sf(data = df_sf) +
-  ggplot2::geom_sf(data = ben_nevis, fill = "red", size = 4) +
-  ggplot2::geom_contour(
-    data = df,
-    ggplot2::aes(xcoord, ycoord, z = Height_m)
+p <- ggplot2::ggplot(df, ggplot2::aes(Height_m)) +
+  ggplot2::geom_histogram(bins = 30) +
+  ggplot2::theme_light() +
+  ggplot2::scale_x_continuous(expand = ggplot2::expansion()) +
+  ggplot2::scale_y_continuous(
+    expand = ggplot2::expansion(mult = base::c(0, 0.1))
+  ) +
+  ggplot2::labs(
+    title = "Most Scotish munros are smaller than 1000 m tall",
+    x = "Height (m)",
+    y = "Number of munros"
+  ) +
+  ggplot2::theme(
+    panel.background = ggplot2::element_blank(),
+    plot.background = ggplot2::element_blank()
   )
+
+curl::curl_download(
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Flag_of_Scotland.svg/1920px-Flag_of_Scotland.svg.png",
+  destfile = "scottish_flag.png"
+)
+
+scottish_flag <- png::readPNG("scottish_flag.png")
+
+png("plot.png", width = 1920, height = 1152, res = 300)
+
+grid::grid.draw(grid::rasterGrob(scottish_flag))
+
+print(p)
+
+dev.off()
