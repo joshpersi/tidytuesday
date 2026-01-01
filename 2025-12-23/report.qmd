@@ -1,0 +1,28 @@
+---
+title: "Untitled"
+format: html
+---
+
+```{r}
+endangered_status <- readr::read_csv(
+  'https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-12-23/endangered_status.csv'
+)
+
+df <- dplyr::count(endangered_status, status_label)
+
+ojs_define(df = df)
+```
+
+```{ojs}
+data = transpose(df)
+
+Plot.plot({
+  title: "Number of languages per status",
+  x: {label: "Status"},
+  y: {label: "Number of languages", ticks: 5},
+  marks: [
+    Plot.barY(data, {x: "status_label", y: "n", fill: "status_label", sort: {x: "-y"}}),
+    Plot.ruleY([0])
+  ]
+})
+```
